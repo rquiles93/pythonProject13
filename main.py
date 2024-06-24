@@ -1,8 +1,8 @@
 import pandas as pd
 import numpy as np
 
-#....nhygygyy
-def ajustar_promedio(df, promedio_objetivo_min,promedio_objetivo_max,  condicion):
+#test....
+def ajustar_promedio(df, promedio_objetivo_min, promedio_objetivo_max, condicion):
     # Calcular el promedio actual
     promedio_actual = df['value'].mean()
     df['dia'] = pd.to_datetime(df['dia'])
@@ -13,26 +13,31 @@ def ajustar_promedio(df, promedio_objetivo_min,promedio_objetivo_max,  condicion
         print("El promedio actual ya cumple con la condición.")
         return df
 
-    # Determinar si necesitamos aumentar o disminuir el promedio
-    necesita_aumentar = condicion == 'mayor'
-
-    # Ordenar los valores a cambiar para minimizar cambios
-
-    df_sorted = df.sort_values(by='value', ascending= necesita_aumentar).reset_index()
-    print(df)
     # Modificar los valores respetando las restricciones
+    cantmodificaciones = 0
     valores_modificados = []
     promedio_objetivo = promedio_objetivo_max
-    if promedio_actual< promedio_objetivo_min:
-        promedio_objetivo = promedio_objetivo_min 
-    diferencia_total = abs(promedio_objetivo - promedio_actual) * len(df) + np.random.randint(1, 4)
+    if promedio_actual < promedio_objetivo_min:
+        promedio_objetivo = promedio_objetivo_min
+
+    diferencia_total = int(abs(promedio_objetivo - promedio_actual) * len(df) + np.random.randint(1, len(df)))
+    print(diferencia_total)
     if promedio_objetivo < promedio_actual:
         diferencia_total = 0 - diferencia_total
-    difaleatoria = np.random.randint(2, 4)
+
+    difaleatoria = int(np.random.randint(2, 4))
     diferencia_parcial = diferencia_total
     print(difaleatoria)
+
+    # Determinar si necesitamos aumentar o disminuir el promedio
+    necesita_aumentar = promedio_objetivo > promedio_actual
+
+    # Ordenar los valores a cambiar para minimizar cambios
+    df_sorted = df.sort_values(by='value', ascending=necesita_aumentar).reset_index()
+    print(df)
+
     i = 0
-    isrepeat= False
+    isrepeat = False
     while i < len(df_sorted):
         row = df_sorted.iloc[i]
         dia_original = row['dia']
@@ -47,7 +52,7 @@ def ajustar_promedio(df, promedio_objetivo_min,promedio_objetivo_max,  condicion
             df) - 1 else None
 
         if ((prev_value is not None and next_value is not None)
-                 and ((abs(value_i + diferencia_total - prev_value) < difaleatoria)
+            and ((abs(value_i + diferencia_total - prev_value) < difaleatoria)
                  and (abs(value_i + diferencia_total - next_value) < difaleatoria))) and isrepeat == False:
             diferencia_parcial = diferencia_total
 
@@ -55,7 +60,7 @@ def ajustar_promedio(df, promedio_objetivo_min,promedio_objetivo_max,  condicion
                 and isrepeat == False:
             diferencia_parcial = difaleatoria
 
-        elif next_value is not None and (abs(value_i + diferencia_total - next_value) > difaleatoria)\
+        elif next_value is not None and (abs(value_i + diferencia_total - next_value) > difaleatoria) \
                 and isrepeat == False:
             diferencia_parcial = difaleatoria
 
@@ -63,40 +68,42 @@ def ajustar_promedio(df, promedio_objetivo_min,promedio_objetivo_max,  condicion
             if isrepeat == False:
                 diferencia_parcial = diferencia_total
 
-
         if necesita_aumentar:
-            incremento = min(diferencia_total, difaleatoria)  # Incremento máximo de 5 para no exceder la diferencia permitida
-            df_sorted.at[i, 'value'] += diferencia_parcial
-            df.iloc[original_position]['value']+= diferencia_parcial
-        else:
-            if diferencia_total < 0 and diferencia_parcial >0:
-                diferencia_parcial = diferencia_parcial*(-1)
-            if df_sorted.at[i, 'value'] + diferencia_parcial <0:
-                diferencia_parcial = diferencia_parcial - (df_sorted.at[i, 'value'] + diferencia_parcial)
-            if df_sorted.at[i, 'value'] + diferencia_parcial ==0:
-                diferencia_parcial += 1
-            df_sorted.at[i, 'value'] += diferencia_parcial
-            df.iloc[original_position]['value']+= diferencia_parcial
 
+            df_sorted.at[i, 'value'] += diferencia_parcial
+            df.iloc[original_position]['value'] += diferencia_parcial
+
+        else:
+            if diferencia_total < 0 and diferencia_parcial > 0:
+                diferencia_parcial = diferencia_parcial * (-1)
+            if df_sorted.at[i, 'value'] + diferencia_parcial < 0:
+                diferencia_parcial = diferencia_parcial - (df_sorted.at[i, 'value'] + diferencia_parcial)
+            df_sorted.at[i, 'value'] += diferencia_parcial
+            df.iloc[original_position]['value'] += diferencia_parcial
+
+        if not isrepeat:
+            cantmodificaciones += 1
         valores_modificados.append(df_sorted.at[i, 'value'])
         diferencia_total = (diferencia_total - (diferencia_parcial))
+        #print(diferencia_total)
 
         # Verificar si ya alcanzamos el objetivo
-        if ((condicion == 'mayor' and df['value'].mean() >= promedio_objetivo) or (
-                condicion == 'menor' and df['value'].mean() <= promedio_objetivo)) and diferencia_total == 0:
+        if ((necesita_aumentar and df['value'].mean() >= promedio_objetivo) or (
+                not necesita_aumentar and df['value'].mean() <= promedio_objetivo)) and diferencia_total == 0:
+            print("Cantidad de modificaciones", cantmodificaciones)
             break
         # Verificar si podemos incrementar mas el mismo registro antes de iterar
         value_i = int(df.iloc[original_position]['value'])
         pv = int((df.iloc[original_position]['value'] - prev_value)) if prev_value is not None else None
         nv = int((df.iloc[original_position]['value'] - next_value)) if next_value is not None else None
 
-        if ((prev_value is not None and abs(pv) < difaleatoria and value_i>1) or \
-                (next_value is not None and abs(nv) < difaleatoria and value_i>1)):
+        if ((prev_value is not None and abs(pv) < difaleatoria and value_i > 0) or \
+                (next_value is not None and abs(nv) < difaleatoria and value_i > 0)):
             diferencia_parcial = difaleatoria - pv if pv is not None and \
                                                       abs(pv < difaleatoria) else difaleatoria - nv
             isrepeat = True
         else:
-            i+=1
+            i += 1
             isrepeat = False
     # Asignar los valores modificados al dataframe original
     #df['value'] = valores_modificados
@@ -106,16 +113,14 @@ def ajustar_promedio(df, promedio_objetivo_min,promedio_objetivo_max,  condicion
 
 # Ejemplo de uso
 data = {
-    'dia': ['2023-06-20', '2023-06-21', '2023-06-22', '2023-06-23'],
-    'value': [6, 3, 3, 6]
+    'dia': ['2023-06-20', '2023-06-21', '2023-06-22', '2023-06-23', '2023-06-24'],
+    'value': [1, 3, 5, 6, 6]
 }
 df = pd.DataFrame(data)
-promedio_objetivo = 5
+promedio_objetivo_min = 2
+promedio_objetivo_max = 3
 condicion = 'mayor'
 
-df_ajustado = ajustar_promedio(df, promedio_objetivo, condicion)
+df_ajustado = ajustar_promedio(df, promedio_objetivo_min, promedio_objetivo_max, condicion)
 print(df_ajustado)
 print(df_ajustado['value'].mean())
-
-
-
