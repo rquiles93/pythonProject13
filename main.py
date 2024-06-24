@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-
+#....nhygygyy
 def ajustar_promedio(df, promedio_objetivo_min,promedio_objetivo_max,  condicion):
     # Calcular el promedio actual
     promedio_actual = df['value'].mean()
